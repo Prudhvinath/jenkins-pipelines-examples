@@ -1,0 +1,18 @@
+version: '3'
+services:
+    agent1:
+        image: jenkins/jnlp-slave
+        container_name: agent1
+        volumes:
+            - ${JENKINS_HOME}:/home/jenkins
+        command: -url http://jenkins-master:8080 ${AGENT1_TOKEN} agent1
+    agent2:
+        image: jenkins/jnlp-slave
+        container_name: agent2
+        volumes:
+            - ${JENKINS_HOME}:/home/jenkins
+        command: -url http://jenkins-master:8080 ${AGENT2_TOKEN} agent2
+networks:
+    default:
+        external:
+            name: jenkins_network

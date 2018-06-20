@@ -1,0 +1,18 @@
+version: '3'
+services:
+    jenkins:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: jenkins-master:lts
+        container_name: jenkins-master
+        ports:
+            - 8080:8080
+            - 50000:50000
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - ${JENKINS_HOME}:/var/jenkins_home
+networks:
+    default:
+        external:
+            name: jenkins_network

@@ -1,4 +1,4 @@
-FROM jenkins:2.60.1
+FROM jenkinsci/jenkins:lts
 
 # Inspired by https://github.com/Logimethods/docker-jenkins
 # This Jenkins image will be able to run docker commands

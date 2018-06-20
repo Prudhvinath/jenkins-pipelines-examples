@@ -20,15 +20,19 @@ $ vagrant up
 $ vagrant ssh
 ```
 
-### Start a local Jenkins master
-- Build the custom Jenkins Docker image
-```bash
-# Go into the directory that has the repository files
-$ cd /opt/provisioning/
+### Prepare variables
 
-# Build the Jenkins Docker image
-$ docker build -t jenkinsx:1 -f jenkins/Dockerfile .
+- Go into the directory that has the repository files
+```bash
+$ cd /opt/provisioning/
 ```
+
+- Load ENVIRONMENT VARIABLES:
+```bash
+$ source env/vars.sh
+```
+
+### Start a local Jenkins master
 
 - Prepare directories and permissions
 ```bash
@@ -40,16 +44,27 @@ $ mkdir -p ~/jenkins_home
 $ chmod -R 777 ~/jenkins_home
 ```
 
+- Build the custom Jenkins Docker image
+```bash
+# Build Jenkins Docker Image
+$ docker-compose -f env/docker-compose-jenkins.yml build
+```
+
+- Create custom Jenkins network (where master and agents will live in harmony)
+```bash
+$ docker network create jenkins_network
+```
+
 - Start the Jenkins master
 ```bash
-$ docker run -d --name jenkins -p 8080:8080 -p 50000:50000 -v /var/run/docker.sock:/var/run/docker.sock -v ~/jenkins_home:/var/jenkins_home jenkinsx:1
+$ docker-compose -f env/docker-compose-jenkins.yml up -d
 ```
-- Browse to http://192.168.17.17:8080 and complete the initial setup wizard
-  - Get initial admin password from `docker logs jenkins` output
+- Browse to http://192.168.0.20:8080 and complete the initial setup wizard
+  - Get initial admin password from `docker logs jenkins-master` output
   - Install suggested plugins
   - Install the **Docker Slaves Plugin** (for dynamic Docker agent provisioning per build)
   - Install the **Blue Ocean plugin** (recommended)
-- Define two Jenkins agents (slaves)
+  - Define two Jenkins agents (slaves)
   - Create two nodes from the `Manage Jenkins` -> `Manage Nodes`
   - Call the nodes `agent1` and `agent2`
   - Set remote root directory to `/home/jenkins`
@@ -59,13 +74,16 @@ $ docker run -d --name jenkins -p 8080:8080 -p 50000:50000 -v /var/run/docker.so
 ### Start two Jenkins agents (slaves)
 Once you have the tokens for the agents, start the two agents
 ```bash
-# Start agent 1
-$ docker run -d --link jenkins:jenkins-server --name agent1 jenkinsci/jnlp-slave:3.7-1 -url http://jenkins-server:8080 ${AGENT1_TOKEN} agent1
-
-# Start agent 2
-$ docker run -d --link jenkins:jenkins-server --name agent2 jenkinsci/jnlp-slave:3.7-1 -url http://jenkins-server:8080 ${AGENT2_TOKEN} agent2
-
+$ docker build -f env/docker-compose-agents.yml up -d
 ```
 
 ### Create Pipeline jobs
 You can create a Pipeline type job using any of the provided examples in the different directories
+
+### Note:
+Known bug for Docker Slaves Plugin
+```bash
+java.io.IOException: Failed to create docker image
+```
+How to solve:
+`Manage Jenkins` -> `Configure System` -> `Docker Slaves` -> `Remoting image` should be `jenkins/slave`
