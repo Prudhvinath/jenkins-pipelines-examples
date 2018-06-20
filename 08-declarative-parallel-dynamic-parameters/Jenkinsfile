@@ -87,22 +87,11 @@ pipeline {
         }
 
         success {
-            mail (
-                    to: emailextrecipients([[$class: 'CulpritsRecipientProvider'], [$class: 'RequesterRecipientProvider']]),
-                    mimeType: "text/html",
-                    subject: "[Jenkins] ${JOB_BASE_NAME} build ${BUILD_NUMBER} passed",
-                    body: "<h3>You build passed!</h3><br>"
-            )
+            echo "Send success e-mail..."
         }
 
         failure {
-            mail (
-                    to: emailextrecipients([[$class: 'CulpritsRecipientProvider'], [$class: 'RequesterRecipientProvider']]),
-                    mimeType: "text/html",
-                    subject: "[Jenkins] ${JOB_BASE_NAME} build ${BUILD_NUMBER} failed!",
-                    body: "<h3>${JOB_BASE_NAME} build ${BUILD_NUMBER} failed!</h3><br>" +
-                            "Go to build page ${BUILD_URL} for more info"
-            )
+            echo "Send failure e-mail..."
         }
     }
 }
