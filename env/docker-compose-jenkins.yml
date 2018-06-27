@@ -12,6 +12,7 @@ services:
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
             - ${JENKINS_HOME}:/var/jenkins_home
+        restart: on-failure
 networks:
     default:
         external:

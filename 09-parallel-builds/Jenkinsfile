@@ -1,0 +1,118 @@
+pipeline {
+    agent { label 'master' }
+    tools {
+        maven 'M3'
+    }
+    options {
+        // Build related options
+        buildDiscarder(logRotator(numToKeepStr:'10'))
+        timeout(time: 30, unit: 'MINUTES')
+    }
+    parameters {
+        // Parameters used all over the Pipeline
+        string (name: 'RELEASE_VERSION', defaultValue: 'SNAPSHOT', description: 'Version to be created.')
+        choice (name: 'DEPLOY_TO', choices: ['Staging', 'Production'], description: 'Choose environment where application will be deployed to')
+    }
+
+    stages {
+        // Source code is checked out from VCS
+        stage('Clone sources') {
+            agent { label 'master' }
+            steps {
+                git 'https://github.com/JFrogDev/project-examples'
+            }
+        }
+        // Maven project is built
+        stage('Maven build') {
+            agent { label 'master' }
+            steps {
+                sh 'cd maven-example; mvn -Dmaven.test.failure.ignore clean package'
+                junit 'maven-example/**/target/surefire-reports/TEST-*.xml'
+            }
+        }
+        // Test environment is prepared
+        stage('Prepare for Tests') {
+            agent { label 'master' }
+            steps {
+                echo 'Environment is ready. Go ahead with the tests'
+            }
+        }
+        // Different kinds of tests are executed in parallel
+        stage('Tests') {
+            steps {
+                parallel (
+                    "Sanity Tests" : {
+                        build(
+                            job: "01-sanity-tests",
+                            parameters:[
+                                string (name: 'RELEASE_VERSION', value: "${params.RELEASE_VERSION}"),
+                            ]
+                        )
+                    },
+                    "API Tests" : {
+                        build(
+                            job: "02-api-tests",
+                            parameters:[
+                                string (name: 'RELEASE_VERSION', value: "${params.RELEASE_VERSION}"),
+                            ]
+                        )
+                    },
+                    "UI Tests" : {
+                        build(
+                            job: "03-ui-tests",
+                            parameters:[
+                                string (name: 'RELEASE_VERSION', value: "${params.RELEASE_VERSION}"),
+                            ]
+                        )
+                    },
+                )
+            }
+        }
+        // After tests are passed, build can be promoted to a release 
+        stage('Promotion') {
+            agent { label 'master' }
+            steps {
+                build(
+                    job: "05-conditional-release",
+                    parameters:[
+                        string (name: 'CUSTOM_TEXT', value: 'From parallel builds job'),
+                        string (name: 'VERSION', value: "${params.RELEASE_VERSION}"),
+                        booleanParam (name: 'DEBUG_BUILD', value: false),
+                        booleanParam (name: 'RELEASE', value: true),
+                    ]
+                )
+            }
+        }
+        // New version is deployed to different servers
+        stage('Deploy') {
+            agent { label 'master' }
+            steps {
+                parallel (
+                    "Deployment: Primary" : {
+                        echo "Deployed version ${params.RELEASE_VERSION} to Canary Servers"
+                    },
+                    "Deployment: Secondary" : {
+                        echo "Deployed version ${params.RELEASE_VERSION} to ${params.DEPLOY_TO} Servers"
+                    }
+                )
+            }
+        }
+
+        stage('Finish') {
+            steps {
+                echo "Build finished"
+            }
+        }
+    }
+    post {
+        always {
+            echo "Always run..."
+        }
+        success {
+            echo "Send success e-mail..."
+        }
+        failure {
+            echo "Send failure e-mail..."
+        }
+    }
+}

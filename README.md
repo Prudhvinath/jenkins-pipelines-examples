@@ -70,11 +70,16 @@ $ docker-compose -f env/docker-compose-jenkins.yml up -d
   - Set remote root directory to `/home/jenkins`
   - Configure them to `Launch method` -> `Launch agent via Java Web Start`
   - Get the secret token for each node (**AGENT1_TOKEN** and **AGENT2_TOKEN**)
+  - Provide token in `env/vars.sh` file
+  - Reload ENVIRONMENT VARIABLES:
+  ```bash
+  $ source env/vars.sh
+  ```
 
 ### Start two Jenkins agents (slaves)
 Once you have the tokens for the agents, start the two agents
 ```bash
-$ docker build -f env/docker-compose-agents.yml up -d
+$ docker-compose -f env/docker-compose-agents.yml up -d
 ```
 
 ### Create Pipeline jobs
