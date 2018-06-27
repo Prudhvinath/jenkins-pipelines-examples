@@ -46,6 +46,73 @@ pipeline {
         }
     }
 
+    // Different kinds of tests are executed in parallel
+    stage('Tests') {
+        steps {
+            parallel (
+                "Sanity Tests" : {
+                    build(
+                        job: "01-sanity-tests",
+                        parameters:[
+                            string (name: 'RELEASE_VERSION', value: "${params.RELEASE_VERSION}"),
+                        ]
+                    )
+                },
+                "API Tests" : {
+                    build(
+                        job: "02-api-tests",
+                        parameters:[
+                            string (name: 'RELEASE_VERSION', value: "${params.RELEASE_VERSION}"),
+                        ]
+                    )
+                },
+                "UI Tests" : {
+                    build(
+                        job: "03-ui-tests",
+                        parameters:[
+                            string (name: 'RELEASE_VERSION', value: "${params.RELEASE_VERSION}"),
+                        ]
+                    )
+                }
+            )
+        }
+    }
+
+    // Build can be promoted to a release 
+    stage('Promotion') {
+        steps {
+            build(
+                job: "05-conditional-release",
+                parameters:[
+                    string (name: 'CUSTOM_TEXT', value: 'From parallel builds job'),
+                    string (name: 'VERSION', value: "${params.RELEASE_VERSION}"),
+                    booleanParam (name: 'DEBUG_BUILD', value: false),
+                    booleanParam (name: 'RELEASE', value: true),
+                ]
+            )
+        }
+    }
+
+    // New version is deployed to different servers
+    stage('Deploy') {
+        steps {
+            parallel (
+                "Deployment: Primary" : {
+                    echo "Deployed version ${params.RELEASE_VERSION} to Canary Servers"
+                },
+                "Deployment: Secondary" : {
+                    echo "Deployed version ${params.RELEASE_VERSION} to ${params.DEPLOY_TO} Servers"
+                }
+            )
+        }
+    }
+
+    stage('Finish') {
+        steps {
+            echo "Build finished"
+        }
+    }
+
     // Post build actions
     post {
         always {
