@@ -1,11 +1,20 @@
 pipeline {
+    // Agent to start on (can be changed later in the pipeline
     agent { label 'master' }
+
+    // Define tools to be used in this pipeline
     tools {
+        // The M3 maven tool must be already configured in
+        // Manage Jenkins -> Global Tool Configuration -> Maven
         maven 'M3'
     }
+
+    // Global options for configuration applied to the whole job
     options {
-        // Build related options
+        // Keep only 10 last build
         buildDiscarder(logRotator(numToKeepStr:'10'))
+
+        // Timeout after 30 minutes
         timeout(time: 30, unit: 'MINUTES')
     }
     parameters {
@@ -15,26 +24,24 @@ pipeline {
     }
 
     stages {
-        // Source code is checked out from VCS
         stage('Clone sources') {
-            agent { label 'master' }
             steps {
                 git 'https://github.com/JFrogDev/project-examples'
             }
         }
-        // Maven project is built
         stage('Maven build') {
-            agent { label 'master' }
             steps {
                 sh 'cd maven-example; mvn -Dmaven.test.failure.ignore clean package'
+            }
+        }
+        stage('Test report') {
+            steps {
                 junit 'maven-example/**/target/surefire-reports/TEST-*.xml'
             }
         }
-        // Test environment is prepared
-        stage('Prepare for Tests') {
-            agent { label 'master' }
+        stage('Archive') {
             steps {
-                echo 'Environment is ready. Go ahead with the tests'
+                archive 'maven-example/**/target/*.war'
             }
         }
         // Different kinds of tests are executed in parallel
@@ -70,7 +77,6 @@ pipeline {
         }
         // After tests are passed, build can be promoted to a release 
         stage('Promotion') {
-            agent { label 'master' }
             steps {
                 build(
                     job: "05-conditional-release",
@@ -85,7 +91,6 @@ pipeline {
         }
         // New version is deployed to different servers
         stage('Deploy') {
-            agent { label 'master' }
             steps {
                 parallel (
                     "Deployment: Primary" : {
