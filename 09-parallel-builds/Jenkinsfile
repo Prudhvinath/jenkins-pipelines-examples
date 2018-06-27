@@ -22,6 +22,12 @@ pipeline {
         timeout(time: 30, unit: 'MINUTES')
     }
 
+    parameters {
+        // Parameters used all over the Pipeline
+        string (name: 'RELEASE_VERSION', defaultValue: 'SNAPSHOT', description: 'Version to be created.')
+        choice (name: 'DEPLOY_TO', choices: ['Staging', 'Production'], description: 'Choose environment where application will be deployed to')
+    }
+
     // Main build steps
     stages {
         stage('Clone sources') {
